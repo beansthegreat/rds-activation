@@ -1,0 +1,19 @@
+import boto3
+rds = boto3.client('rds')
+
+def lambda_handler(event, context):
+    dbs = rds.describe_db_instances()
+    for db in dbs['DBInstances']:
+        if db['DBInstanceStatus'] == 'stopped':
+            try:
+                tags = rds.list_tags_for_resource(ResourceName=db['DBInstanceArn'])['TagList']
+                for tag in tags:
+                    if tag['Key'] == 'AutoStart' and tag['Value'] == 'True':
+                        rds.start_db_instance(DBInstanceIdentifier=db['DBInstanceIdentifier'])
+                        print(f"Starting instance: {db['DBInstanceIdentifier']}.")
+            except Exception as e:
+                print(f"Cannot start instance {db['DBInstanceIdentifier']}.")
+                print(e)
+
+if __name__ == "__main__":
+    lambda_handler(None, None)
